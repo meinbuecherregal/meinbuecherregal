@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Mein Regal</title>
+<style>
+  :root{
+    --bg:#182620; --panel:#1F332A; --card:#233A30; --cream:#EDE6D6; --cream-dim:#B9B0A0;
+    --gold:#C9A24B; --oxblood:#8A3A34; --line:#33493D;
+    --tint-reading: rgba(201,162,75,0.07);
+    --tint-backlog: rgba(140,135,120,0.06);
+    --tint-read: rgba(74,90,122,0.08);
+  }
+  body.theme-light{
+    --bg:#F3EEE1; --panel:#EAE1CB; --card:#FBF8F0; --cream:#2B271E; --cream-dim:#75695A;
+    --gold:#93701F; --oxblood:#8A3A34; --line:#DCD0B4;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    -webkit-font-smoothing:antialiased;}
+  body{padding-bottom:60px;}
+  .mono{font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace;}
+  h1,h2,h3{font-family: Georgia, 'Palatino', serif; margin:0;}
+  button, input, select, textarea{font-family:inherit;}
+  button{cursor:pointer; color:inherit;}
+  a{color:inherit;}
+  ::placeholder{color:var(--cream-dim); opacity:.55;}
+  input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.7) sepia(1) saturate(3);}
+
+  #app{max-width:520px;margin:0 auto;}
+
+  /* header */
+  .header-block{background:linear-gradient(180deg, var(--panel), var(--bg));
+    padding:18px 16px 12px; position:sticky; top:0; z-index:20; border-bottom:1px solid var(--line);}
+  .header-row{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px;}
+  .header-row h1{font-style:italic; font-weight:400; font-size:1.5rem;}
+  .header-actions{display:flex; gap:7px; align-items:center; flex-shrink:0;}
+  .icon-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--card);
+    display:flex;align-items:center;justify-content:center;color:var(--cream-dim); font-size:0.875rem; flex-shrink:0;}
+  .icon-btn.pill{width:auto; min-width:32px; border-radius:16px; padding:0 10px; gap:4px; font-family:'Courier New',monospace; font-size:0.75rem; font-weight:bold;}
+  .icon-btn.pill.active{border-color:var(--gold); background:rgba(201,162,75,0.15); color:var(--gold);}
+  .search-row{display:flex; gap:8px; margin-bottom:8px;}
+  .search-wrap{position:relative; flex:1;}
+  .search-wrap input{width:100%; background:var(--card); border:1px solid var(--line); border-radius:18px;
+    color:var(--cream); padding:7px 30px 7px 28px; font-size:0.8438rem; outline:none;}
+  .search-wrap input:focus{border-color:var(--gold);}
+  .search-icon{position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:var(--cream-dim);}
+  .clear-search{position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none;
+    color:var(--cream-dim); font-size:0.875rem; padding:2px 6px;}
+
+  .add-book-row{margin:2px 0 12px;}
+  .add-book-btn{width:100%; padding:10px 0; border-radius:10px; border:1px solid var(--gold);
+    background:rgba(201,162,75,0.12); color:var(--gold); font-family:'Courier New',monospace; font-size:0.8125rem;
+    font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px; letter-spacing:.3px;}
+
+  .chip-row{display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; padding-right:28px;
+    -webkit-overflow-scrolling:touch;
+    -webkit-mask-image:linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+    mask-image:linear-gradient(to right, black calc(100% - 28px), transparent 100%);}
+  .chip{white-space:nowrap; padding:6px 12px; border-radius:20px; border:1px solid var(--line);
+    background:transparent; color:var(--cream-dim); font-size:0.7188rem; font-family:'Courier New',monospace;}
+  .chip.active{border-color:var(--gold); background:rgba(201,162,75,0.15); color:var(--gold);}
+
+  /* segments */
+  .segment{padding:16px 16px 24px;}
+  .segment-reading{background:var(--tint-reading);}
+  .segment-backlog{background:var(--tint-backlog);}
+  .segment-read{background:var(--tint-read);}
+  .segment-title{font-family:'Courier New',monospace; font-size:0.6875rem; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--cream-dim); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;}
+  .segment-title .lbl{color:var(--gold);}
+
+  .shelf-row{display:flex; gap:8px; overflow-x:auto; padding:6px 0 10px; align-items:flex-start;}
+  .shelf-row-wrap{display:flex; flex-wrap:wrap; gap:8px 6px; padding:6px 0 4px; align-items:flex-end;}
+  .flat-list{display:flex; flex-direction:column; gap:10px;}
+  .flat-year-header{font-family:'Courier New',monospace; font-size:0.8125rem; color:var(--gold); font-weight:600; letter-spacing:1px; margin-bottom:8px;}
+
+  /* spines */
+  .spine{border:none; border-radius:3px; flex-shrink:0; cursor:pointer; position:relative;
+    display:flex; flex-direction:column; align-items:center; padding:8px 5px;
+    box-shadow:2px 3px 6px rgba(0,0,0,0.35), inset 2px 0 0 rgba(255,255,255,0.10), inset -2px 0 0 rgba(0,0,0,0.25);}
+  .spine .rule{width:100%; height:1px; background:rgba(237,230,214,0.3); flex-shrink:0;}
+  .spine .date-fixed{height:12px; line-height:12px; font-size:0.5625rem; color:var(--cream); opacity:.85; margin-bottom:3px; flex-shrink:0; white-space:nowrap;}
+  .spine .author-fixed{height:12px; line-height:12px; font-size:0.5625rem; color:var(--cream); opacity:.9; margin-top:3px; flex-shrink:0; white-space:nowrap;}
+  .spine .title-area{height:158px; width:auto; writing-mode:vertical-rl; transform:rotate(180deg);
+    white-space:normal; overflow-wrap:normal; word-break:keep-all; color:var(--cream); font-weight:600;
+    display:flex; align-items:center; justify-content:center; padding:4px 1px;}
+  .spine.backlog{filter:grayscale(0.35) brightness(0.82);}
+  .spine.pinned{filter:none; box-shadow:0 0 0 2px var(--gold), 2px 3px 6px rgba(0,0,0,0.35);}
+  .pin-flag{position:absolute; top:-9px; left:50%; transform:translateX(-50%); background:var(--gold); color:var(--bg);
+    font-family:'Courier New',monospace; font-size:0.5313rem; padding:2px 6px; border-radius:8px; white-space:nowrap; z-index:2;}
+  .year-divider{writing-mode:vertical-rl; transform:rotate(180deg); font-family:'Courier New',monospace; font-size:0.6875rem; color:var(--gold);
+    display:flex; align-items:center; justify-content:center; padding:2px 3px; opacity:.75; align-self:stretch;}
+
+  .open-book{flex-shrink:0; width:148px; min-height:190px; background:#FFFFFF; border-radius:4px; position:relative;
+    cursor:pointer; border:1px solid rgba(0,0,0,0.15); box-shadow:0 4px 10px rgba(0,0,0,0.28);
+    display:flex; flex-direction:column; overflow:hidden; color:#141414;}
+  .open-book::before{content:''; position:absolute; left:50%; top:10px; bottom:10px; width:1px; background:rgba(0,0,0,0.15); transform:translateX(-0.5px);}
+  .ob-banner{height:9px; width:100%; flex-shrink:0;}
+  .ob-body{flex:1; padding:12px; display:flex; flex-direction:column; min-height:0;}
+  .ob-title{font-weight:600; line-height:1.25; color:#141414; overflow-wrap:break-word;}
+  .ob-author{font-family:'Courier New',monospace; font-size:0.6563rem; color:#4a4a4a; margin-top:auto; padding-top:10px; flex-shrink:0;}
+
+  .empty-state{text-align:center; padding:40px 20px; color:var(--cream-dim); font-size:0.875rem;}
+
+  /* detail / form pages */
+  .page{padding:20px 16px 40px;}
+  .back-link{background:none;border:none;color:var(--cream-dim);display:flex;align-items:center;gap:4px;
+    font-family:'Courier New',monospace;font-size:0.75rem;margin-bottom:18px;padding:0;}
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-family:'Courier New',monospace; font-size:0.6875rem; letter-spacing:0.5px;
+    text-transform:uppercase; color:var(--cream-dim); margin-bottom:6px;}
+  .field input[type="text"], .field input[type="number"], .field input[type="date"], .field textarea{
+    width:100%; background:var(--bg); border:1px solid var(--line); border-radius:6px; color:var(--cream);
+    padding:9px 10px; font-size:0.9375rem; outline:none;}
+  .field input:focus, .field textarea:focus{border-color:var(--gold);}
+  .field textarea{min-height:100px; resize:vertical;}
+  .status-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .status-row button{flex:1; padding:9px 4px; border-radius:6px; border:1px solid var(--line); background:transparent;
+    color:var(--cream-dim); font-family:'Courier New',monospace; font-size:0.7188rem; min-width:80px;}
+  .status-row button.active{border-color:var(--gold); background:rgba(201,162,75,0.15); color:var(--gold);}
+  .row-2{display:flex; gap:12px;}
+  .row-2 > div{flex:1;}
+
+  .genre-picker-grid{display:flex; flex-wrap:wrap; gap:8px;}
+  .genre-chip{color:var(--cream-dim); display:flex; align-items:center; gap:6px; padding:7px 12px; border-radius:20px; border:1px solid var(--line);
+    background:transparent; font-size:0.7813rem; font-family:'Courier New',monospace;}
+  .genre-chip.selected{border-color:var(--gold); background:rgba(201,162,75,0.12); color:var(--gold);}
+
+  .stars{display:inline-flex; gap:2px;}
+  .star-wrap{position:relative; display:inline-block;}
+  .star-half-btn{position:absolute; top:0; bottom:0; width:50%; background:none; border:none; padding:0; z-index:2;}
+  .star-half-btn.left{left:0;} .star-half-btn.right{right:0;}
+
+  .primary-btn{width:100%; padding:12px 0; border-radius:8px; border:none; background:var(--gold); color:var(--bg);
+    font-family:'Courier New',monospace; font-size:0.8438rem; font-weight:bold;}
+  .secondary-btn{width:100%; padding:12px 0; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--cream-dim);
+    font-family:'Courier New',monospace; font-size:0.8438rem;}
+  .ghost-danger{background:none;border:none;color:var(--oxblood);font-family:'Courier New',monospace;font-size:0.7813rem;
+    display:flex;align-items:center;gap:6px;justify-content:center;width:100%;padding:8px 0; margin-top:6px;}
+  .btn-row{display:flex; gap:10px; margin-top:6px;}
+  .btn-row .secondary-btn{flex:1;} .btn-row .primary-btn{flex:2;}
+  .form-error{color:var(--oxblood); font-family:'Courier New',monospace; font-size:0.75rem; text-align:center; margin-top:10px;}
+
+  .pin-toggle{width:100%; padding:10px 0; border-radius:8px; border:1px dashed var(--gold); background:rgba(201,162,75,0.08);
+    color:var(--gold); font-family:'Courier New',monospace; font-size:0.7813rem; margin-bottom:16px;}
+  .pin-toggle.active{background:var(--gold); color:var(--bg); border-style:solid;}
+
+  .dot{width:9px;height:9px;border-radius:50%; flex-shrink:0; display:inline-block;}
+  .drag-handle{cursor:grab; color:var(--cream-dim); font-size:1rem; padding:4px 6px; touch-action:none; flex-shrink:0;}
+  .genre-row.dragging{opacity:0.5;}
+
+  .detail-header{display:flex; gap:16px; margin-bottom:18px;}
+  .detail-cover{width:60px; height:210px; border-radius:3px; flex-shrink:0; box-shadow:inset 2px 0 0 rgba(255,255,255,0.1), inset -2px 0 0 rgba(0,0,0,0.25);}
+  .badge{font-family:'Courier New',monospace; font-size:0.6563rem; letter-spacing:0.5px; text-transform:uppercase;
+    display:inline-block; padding:2px 8px; border-radius:10px; margin:0 6px 6px 0;
+    background:var(--line); color:var(--cream-dim);}
+  .detail-title{font-size:1.5rem; margin-bottom:4px; line-height:1.15;}
+  .detail-author{font-style:italic; color:var(--cream-dim); font-size:0.9375rem; margin-bottom:10px;}
+  .detail-meta{font-family:'Courier New',monospace; font-size:0.7188rem; color:var(--cream-dim); margin-top:10px; display:flex; gap:14px; flex-wrap:wrap;}
+  .detail-notes{font-size:0.9688rem; line-height:1.6; white-space:pre-wrap; margin-bottom:20px;}
+  .series-link{display:block; width:100%; text-align:left; background:var(--card); border:1px solid var(--gold); border-radius:8px;
+    padding:10px 12px; margin-bottom:18px; color:var(--gold); font-family:'Courier New',monospace; font-size:0.7813rem;}
+
+  /* genre manager */
+  .genre-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
+  .genre-row input[type="color"]{width:32px; height:32px; border:none; border-radius:50%; padding:0; background:none;}
+  .genre-row input[type="text"]{flex:1; background:var(--bg); border:1px solid var(--line); border-radius:6px; color:var(--cream); padding:7px 9px; font-size:0.875rem;}
+  .genre-row button{background:none; border:none; color:var(--cream-dim); font-size:1rem; padding:4px 6px;}
+  .add-genre-row{display:flex; gap:8px; margin-top:14px;}
+  .add-genre-row input[type="text"]{flex:1; background:var(--bg); border:1px solid var(--line); border-radius:6px; color:var(--cream); padding:8px 10px; font-size:0.875rem;}
+
+  /* settings / backup */
+  .settings-card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; margin-bottom:14px;}
+  .settings-card h3{font-size:1rem; margin-bottom:6px;}
+  .settings-card p{font-size:0.8125rem; color:var(--cream-dim); line-height:1.5; margin:0 0 12px;}
+  .last-saved{font-family:'Courier New',monospace; font-size:0.75rem; color:var(--gold); margin-bottom:4px; text-align:center;}
+  #importFileInput{display:none;}
+  .slider-row{display:flex; align-items:center; gap:10px;}
+  .slider-row input[type="range"]{flex:1; accent-color:var(--gold);}
+  .slider-val{font-family:'Courier New',monospace; font-size:0.75rem; color:var(--gold); width:44px; text-align:right;}
+
+  /* profile / stats */
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+  .stat-card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px;}
+  .stat-value{font-size:1.375rem; font-weight:600; color:var(--gold); line-height:1.1;}
+  .stat-label{font-family:'Courier New',monospace; font-size:0.6563rem; color:var(--cream-dim); margin-top:4px; letter-spacing:.3px;}
+  .stat-full{grid-column:1 / -1;}
+  .year-stat-row{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:0.8438rem; color:var(--cream); font-family:inherit; text-align:left;}
+  .year-stat-row .y{font-family:'Courier New',monospace; color:var(--gold); font-weight:600;}
+  .funfact-card{background:linear-gradient(135deg, rgba(201,162,75,0.15), rgba(201,162,75,0.03)); border:1px solid var(--gold);
+    border-radius:10px; padding:16px; margin-bottom:16px; text-align:center;}
+  .funfact-card .ff-value{font-size:1.625rem; font-weight:600; color:var(--gold);}
+  .funfact-card .ff-label{font-size:0.7813rem; color:var(--cream-dim); margin-top:4px;}
+  .series-row{display:flex; justify-content:space-between; align-items:center; background:var(--card); border:1px solid var(--line);
+    border-radius:8px; padding:12px 14px; margin-bottom:8px; width:100%; text-align:left;}
+  .series-row .sname{font-size:0.9375rem; font-weight:600;}
+  .series-row .scount{font-family:'Courier New',monospace; font-size:0.7188rem; color:var(--gold);}
+
+  .toast{position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:var(--card); border:1px solid var(--gold);
+    color:var(--cream); padding:8px 16px; border-radius:20px; font-family:'Courier New',monospace; font-size:0.75rem; z-index:100;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<input type="file" id="importFileInput" accept="application/json,.json">
+
+<script>
+(function(){
+  "use strict";
+
+  var LS_BOOKS='bibliothek_books_v1', LS_GENRES='bibliothek_genres_v1', LS_LAST_BACKUP='bibliothek_last_backup_v1',
+      LS_COLORMODE='bibliothek_colormode_v1', LS_THEME='bibliothek_theme_v1', LS_FONTSCALE='bibliothek_fontscale_v1';
+
+  function loadJSON(key, fallback){
+    try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function saveJSON(key, val){
+    try{ localStorage.setItem(key, JSON.stringify(val)); return true; }
+    catch(e){ return false; }
+  }
+
+  var DEFAULT_GENRES = [
+    {id:'historischer_roman', name:'Historischer Roman', color:'#8B4513'},
+    {id:'krimi', name:'Krimi', color:'#1D2A44'},
+    {id:'romance', name:'Romance', color:'#E63946'},
+    {id:'fantasy', name:'Fantasy', color:'#4A154B'},
+    {id:'biografie', name:'Biografie', color:'#C08A3E'},
+    {id:'horror', name:'Horror', color:'#1A1A1A'},
+    {id:'scifi', name:'Sci-Fi', color:'#00A896'}
+  ];
+
+  var loadedBooks = loadJSON(LS_BOOKS, []);
+  loadedBooks.forEach(function(b){
+    if(!b.genreIds){ b.genreIds = b.genreId ? [b.genreId] : []; }
+  });
+
+  var state = {
+    books: loadedBooks,
+    genres: loadJSON(LS_GENRES, DEFAULT_GENRES),
+    colorMode: loadJSON(LS_COLORMODE, 'main'),
+    theme: loadJSON(LS_THEME, 'dark'),
+    fontScale: loadJSON(LS_FONTSCALE, 1),
+    lastBackup: loadJSON(LS_LAST_BACKUP, null),
+    view: {mode:'shelf'},
+    statusFilter: 'all',
+    query: '',
+    expandedYear: null,
+    toast: null
+  };
+
+  function persistBooks(){ saveJSON(LS_BOOKS, state.books); }
+  function persistGenres(){ saveJSON(LS_GENRES, state.genres); }
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  var STATUS_LABEL = {reading:'In Arbeit', toread:'Lesestapel', read:'Gelesen', wishlist:'Wunschliste'};
+  var FORMAT_LABEL = {print:'Print', ebook:'E-Book', hoerbuch:'Hörbuch'};
+
+  function genreById(id){ return state.genres.find(function(g){return g.id===id;}); }
+  function genreNamesForBook(b){
+    return (b.genreIds||[]).map(function(id){ var g=genreById(id); return g?g.name:null; }).filter(Boolean);
+  }
+  function genreColorsForBook(b){
+    var cols = (b.genreIds||[]).map(function(id){ var g=genreById(id); return g?g.color:null; }).filter(Boolean);
+    if(cols.length===0) cols=['#4A5A7A'];
+    return cols;
+  }
+  function spineBackground(b){
+    var cols = genreColorsForBook(b);
+    if(state.colorMode==='main' || cols.length===1){
+      var c = cols[0];
+      return 'linear-gradient(180deg,'+c+' 0%, '+c+'CC 100%)';
+    }
+    if(state.colorMode==='gradient'){
+      return 'linear-gradient(180deg,' + cols.join(',') + ')';
+    }
+    var n = cols.length, stops=[];
+    cols.forEach(function(c,i){
+      var start=(i/n*100).toFixed(1), end=((i+1)/n*100).toFixed(1);
+      stops.push(c+' '+start+'%', c+' '+end+'%');
+    });
+    return 'linear-gradient(180deg,' + stops.join(',') + ')';
+  }
+  function bannerBackground(b){
+    var cols = genreColorsForBook(b);
+    if(state.colorMode==='main' || cols.length===1) return cols[0];
+    if(state.colorMode==='gradient') return 'linear-gradient(90deg,'+cols.join(',')+')';
+    var n = cols.length, stops=[];
+    cols.forEach(function(c,i){
+      var start=(i/n*100).toFixed(1), end=((i+1)/n*100).toFixed(1);
+      stops.push(c+' '+start+'%', c+' '+end+'%');
+    });
+    return 'linear-gradient(90deg,' + stops.join(',') + ')';
+  }
+
+  function formatDateDMY(iso){
+    if(!iso) return '';
+    var p = iso.split('-');
+    if(p.length!==3) return iso;
+    return p[2]+'/'+p[1]+'/'+p[0];
+  }
+
+  function showToast(msg){
+    state.toast = msg;
+    render();
+    setTimeout(function(){ state.toast=null; render(); }, 2200);
+  }
+
+  function spineWidth(book){
+    var base = 32;
+    var pagesBump = Math.min(34, Math.floor((book.pages||0)/20));
+    return base + pagesBump;
+  }
+  function spineFontSize(title){
+    var len = (title||'').length;
+    if(len>40) return 10.5;
+    if(len>26) return 11.5;
+    if(len>16) return 12.5;
+    return 13.5;
+  }
+
+  /* ---------- star widget (0.5 steps, gradient-fill SVG) ---------- */
+  var STAR_PATH = "M12 2.5l2.9 6.4 6.9.7-5.2 4.7 1.5 6.8L12 17.8 5.9 21.1l1.5-6.8L2.2 9.6l6.9-.7z";
+  var starGradCounter = 0;
+
+  function starsHTML(value, readOnly, size){
+    size = size || 22;
+    var html = '<div class="stars">';
+    for(var i=1;i<=5;i++){
+      var pct = value>=i ? 100 : (value>=i-0.5 ? 50 : 0);
+      var gid = 'sg'+(starGradCounter++);
+      html += '<span class="star-wrap" style="width:'+size+'px;height:'+size+'px;">';
+      html += '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'">';
+      html += '<defs><linearGradient id="'+gid+'" x1="0" x2="1" y1="0" y2="0">';
+      html += '<stop offset="'+pct+'%" stop-color="var(--gold)"/>';
+      html += '<stop offset="'+pct+'%" stop-color="transparent"/>';
+      html += '</linearGradient></defs>';
+      html += '<path d="'+STAR_PATH+'" fill="url(#'+gid+')" stroke="var(--gold)" stroke-width="1.3" stroke-linejoin="round"/>';
+      html += '</svg>';
+      if(!readOnly){
+        html += '<button type="button" class="star-half-btn left" data-star="'+(i-0.5)+'"></button>';
+        html += '<button type="button" class="star-half-btn right" data-star="'+i+'"></button>';
+      }
+      html += '</span>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  var app = document.getElementById('app');
+
+  function applyGlobalStyles(){
+    document.body.classList.toggle('theme-light', state.theme==='light');
+    document.documentElement.style.fontSize = (state.fontScale*100)+'%';
+  }
+
+  function render(){
+    applyGlobalStyles();
+    var v = state.view;
+    var html = '';
+    if(v.mode==='shelf') html = renderShelfPage();
+    else if(v.mode==='detail') html = renderDetailPage(bookById(v.id));
+    else if(v.mode==='form') html = renderFormPage(v.id ? bookById(v.id) : null);
+    else if(v.mode==='genres') html = renderGenrePage();
+    else if(v.mode==='settings') html = renderSettingsPage();
+    else if(v.mode==='profile') html = renderProfilePage();
+    else if(v.mode==='series') html = renderSeriesOverviewPage();
+    else if(v.mode==='seriesDetail') html = renderSeriesDetailPage(v.name);
+
+    if(state.toast) html += '<div class="toast">'+escapeHtml(state.toast)+'</div>';
+    app.innerHTML = html;
+    attachHandlers();
+  }
+
+  function bookById(id){ return state.books.find(function(b){return b.id===id;}); }
+
+  function escapeHtml(s){
+    return (s||'').replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function matchesFilters(b){
+    var q = state.query.trim().toLowerCase();
+    if(q){
+      var hay = (b.title+' '+b.authorFirst+' '+b.authorLast).toLowerCase();
+      if(hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  }
+
+  /* ---------- shelf page ---------- */
+  function renderShelfPage(){
+    var html = '';
+    html += headerBlock();
+
+    if(state.statusFilter !== 'all'){
+      var list = state.books.filter(function(b){ return b.status===state.statusFilter && matchesFilters(b); });
+      if(state.statusFilter==='read'){
+        list = list.slice().sort(function(a,b){ return (b.dateFinished||'').localeCompare(a.dateFinished||''); });
+      } else {
+        list = list.slice().sort(function(a,b){
+          if(state.statusFilter==='toread'){
+            if(a.pinned && !b.pinned) return -1;
+            if(b.pinned && !a.pinned) return 1;
+          }
+          return (b.dateAdded||'').localeCompare(a.dateAdded||'');
+        });
+      }
+      html += '<div class="segment">';
+      html += '<div class="segment-title"><span class="lbl">'+STATUS_LABEL[state.statusFilter]+'</span><span>'+list.length+'</span></div>';
+      if(list.length===0){
+        html += '<div class="empty-state">Keine Bücher in diesem Bereich.</div>';
+      } else if(state.statusFilter==='read'){
+        html += flatReadGrouped(list);
+      } else {
+        html += '<div class="flat-list">';
+        list.forEach(function(b){ html += flatRow(b); });
+        html += '</div>';
+      }
+      html += '</div>';
+    } else {
+      var reading = state.books.filter(function(b){return b.status==='reading' && matchesFilters(b);});
+      var toread = state.books.filter(function(b){return b.status==='toread' && matchesFilters(b);})
+        .sort(function(a,b){ if(a.pinned&&!b.pinned) return -1; if(b.pinned&&!a.pinned) return 1; return 0; });
+      var read = state.books.filter(function(b){return b.status==='read' && matchesFilters(b);});
+
+      html += '<div class="segment segment-reading">';
+      html += '<div class="segment-title"><span class="lbl">In Arbeit</span><span>'+reading.length+'</span></div>';
+      if(reading.length===0){ html += emptySegHint('Kein Buch gerade in Arbeit.'); }
+      else {
+        html += '<div class="shelf-row">';
+        reading.forEach(function(b){ html += openBookHTML(b); });
+        html += '</div>';
+      }
+      html += '</div>';
+
+      html += '<div class="segment segment-backlog">';
+      html += '<div class="segment-title"><span class="lbl">Lesestapel</span><span>'+toread.length+'</span></div>';
+      if(toread.length===0){ html += emptySegHint('Lesestapel ist leer.'); }
+      else {
+        html += '<div class="shelf-row">';
+        toread.forEach(function(b){ html += spineHTML(b,false); });
+        html += '</div>';
+      }
+      html += '</div>';
+
+      html += '<div class="segment segment-read">';
+      html += '<div class="segment-title"><span class="lbl">Gelesen</span><span>'+read.length+'</span></div>';
+      if(read.length===0){ html += emptySegHint('Noch nichts als gelesen markiert.'); }
+      else { html += renderReadBooks(read); }
+      html += '</div>';
+    }
+    return html;
+  }
+
+  function renderReadBooks(read){
+    var html = '<div class="shelf-row-wrap">';
+    var sorted = read.slice().sort(function(a,b){ return (b.dateFinished||'').localeCompare(a.dateFinished||''); });
+    var lastYear = null;
+    sorted.forEach(function(b){
+      var y = (b.dateFinished||'').slice(0,4) || '?';
+      if(y!==lastYear){ html += '<div class="year-divider">'+escapeHtml(y)+'</div>'; lastYear=y; }
+      html += spineHTML(b,true);
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function emptySegHint(text){
+    return '<div class="empty-state" style="padding:16px 0;">'+escapeHtml(text)+'</div>';
+  }
+
+  function openBookHTML(b){
+    return '<div class="open-book" data-open="'+b.id+'">'+
+      '<div class="ob-banner" style="background:'+bannerBackground(b)+';"></div>'+
+      '<div class="ob-body">'+
+      '<div class="ob-title" style="font-size:'+(spineFontSize(b.title)+2)+'px;">'+escapeHtml(b.title)+'</div>'+
+      '<div class="ob-author">'+escapeHtml(b.authorLast||'')+'</div>'+
+      '</div></div>';
+  }
+
+  function spineHTML(b, showDate){
+    var minW = spineWidth(b);
+    var fs = spineFontSize(b.title);
+    var cls = 'spine' + (b.status==='toread' ? ' backlog' : '') + (b.pinned ? ' pinned' : '');
+    var dateTxt = (showDate && b.dateFinished) ? formatDateDMY(b.dateFinished) : '';
+    var pinFlag = b.pinned ? '<div class="pin-flag">📌 nächstes</div>' : '';
+    return '<button class="'+cls+'" data-open="'+b.id+'" style="min-width:'+minW+'px; background:'+spineBackground(b)+';">'+
+      pinFlag+
+      '<div class="date-fixed mono">'+escapeHtml(dateTxt)+'</div>'+
+      '<div class="rule"></div>'+
+      '<div class="title-area" style="font-size:'+fs+'px;">'+escapeHtml(b.title)+'</div>'+
+      '<div class="rule"></div>'+
+      '<div class="author-fixed mono">'+escapeHtml(b.authorLast||'')+'</div>'+
+      '</button>';
+  }
+
+  function flatRow(b, showStars){
+    var names = genreNamesForBook(b).join(', ');
+    var formatTxt = b.format ? FORMAT_LABEL[b.format] : '';
+    var subParts = [b.authorFirst+' '+b.authorLast];
+    if(names) subParts.push(names);
+    if(formatTxt) subParts.push(formatTxt);
+    var trailing = '';
+    if(b.status==='read'){
+      trailing = '<div style="text-align:right;flex-shrink:0;">'+
+        '<div class="mono" style="font-size:10.5px;color:var(--gold);white-space:nowrap;">'+formatDateDMY(b.dateFinished)+'</div>'+
+        (showStars ? '<div style="margin-top:3px;">'+starsHTML(b.rating||0,true,13)+'</div>' : '')+
+        '</div>';
+    }
+    var pin = b.pinned ? '<span style="flex-shrink:0;">📌</span>' : (b.wantToBuy ? '<span style="flex-shrink:0;">💲</span>' : '');
+    return '<button data-open="'+b.id+'" style="display:flex; gap:10px; align-items:center; text-align:left; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 12px; width:100%;">'+
+      pin+
+      '<div style="width:6px;height:40px;border-radius:3px;background:'+spineBackground(b)+';flex-shrink:0;"></div>'+
+      '<div style="flex:1;min-width:0;">'+
+      '<div style="font-weight:600;font-size:15px;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escapeHtml(b.title)+'</div>'+
+      '<div class="mono" style="font-size:11.5px;color:var(--cream-dim);">'+escapeHtml(subParts.join(' · '))+'</div>'+
+      '</div>'+
+      trailing+
+      '</button>';
+  }
+
+  function flatReadGrouped(list){
+    var byYear = {};
+    list.forEach(function(b){
+      var y = (b.dateFinished||'').slice(0,4) || 'Unbekannt';
+      (byYear[y] = byYear[y]||[]).push(b);
+    });
+    var years = Object.keys(byYear).sort(function(a,b){ return b.localeCompare(a); });
+    var html = '';
+    years.forEach(function(y, idx){
+      html += '<div class="flat-year-header" style="'+(idx>0?'margin-top:20px;':'')+'">'+escapeHtml(y)+'</div>';
+      html += '<div class="flat-list">';
+      byYear[y].slice().sort(function(a,b){ return (b.dateFinished||'').localeCompare(a.dateFinished||''); })
+        .forEach(function(b){ html += flatRow(b, true); });
+      html += '</div>';
+    });
+    return html;
+  }
+
+  function headerBlock(){
+    var html = '<div class="header-block">';
+    html += '<div class="header-row"><h1>Mein Regal</h1><div class="header-actions">';
+    html += '<button class="icon-btn" id="openGenres" title="Genres verwalten">🎨</button>';
+    html += '<button class="icon-btn" id="openProfile" title="Profil & Statistik">📊</button>';
+    html += '<button class="icon-btn" id="openSettings" title="Einstellungen">⚙️</button>';
+    html += '</div></div>';
+
+    html += '<div class="search-row"><div class="search-wrap"><span class="search-icon">⌕</span>';
+    html += '<input id="searchInput" type="text" placeholder="Titel, Autor …" value="'+escapeHtml(state.query)+'">';
+    if(state.query) html += '<button class="clear-search" id="clearSearch">✕</button>';
+    html += '</div>';
+    var wishlistCount = state.books.filter(function(b){return b.status==='wishlist';}).length;
+    html += '<button class="icon-btn pill'+(state.statusFilter==='wishlist'?' active':'')+'" data-status="wishlist" title="Wunschliste">⭐'+(wishlistCount>0?' '+wishlistCount:'')+'</button>';
+    html += '<button class="icon-btn" data-nav="series" title="Buchreihen">🔖</button>';
+    html += '</div>';
+
+    html += '<div class="add-book-row"><button class="add-book-btn" id="newBook">📖 ＋ Neues Buch</button></div>';
+
+    html += '<div class="chip-row">';
+    [['all','Alle'],['reading','In Arbeit'],['toread','Lesestapel'],['read','Gelesen']].forEach(function(s){
+      html += '<button class="chip'+(state.statusFilter===s[0]?' active':'')+'" data-status="'+s[0]+'">'+s[1]+'</button>';
+    });
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  /* ---------- detail page ---------- */
+  function siblingsInSeries(b){
+    if(!b.seriesName || !b.seriesName.trim()) return [];
+    var key = b.seriesName.trim().toLowerCase();
+    return state.books.filter(function(o){ return (o.seriesName||'').trim().toLowerCase()===key; });
+  }
+
+  function renderDetailPage(b){
+    if(!b) return '<div class="page"><button class="back-link" data-nav="shelf">‹ Regal</button><div class="empty-state">Buch nicht gefunden.</div></div>';
+    var html = '<div class="page">';
+    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<div class="detail-header">';
+    html += '<div class="detail-cover" style="background:'+spineBackground(b)+';"></div>';
+    html += '<div style="flex:1;min-width:0;">';
+    if(b.pinned) html += '<span class="badge mono">📌 Nächstes</span>';
+    (b.genreIds||[]).forEach(function(id){
+      var g = genreById(id);
+      if(g) html += '<span class="badge mono">'+escapeHtml(g.name)+'</span>';
+    });
+    html += '<div class="detail-title">'+escapeHtml(b.title)+'</div>';
+    html += '<div class="detail-author">'+escapeHtml((b.authorFirst||'')+' '+(b.authorLast||''))+'</div>';
+    if(b.seriesName){
+      html += '<div class="mono" style="font-size:11.5px;color:var(--cream-dim);margin-top:-4px;margin-bottom:8px;">'+escapeHtml(b.seriesName)+(b.seriesNumber?' · Band '+escapeHtml(String(b.seriesNumber)):'')+'</div>';
+    }
+    if(b.status==='read') html += starsHTML(b.rating||0, true, 17);
+    var audioMin = (Number(b.audioHours)||0)*60 + (Number(b.audioMinutes)||0);
+    if(b.status==='read' && (b.pages>0 || audioMin>0 || b.dateFinished)){
+      html += '<div class="detail-meta">';
+      if(b.format==='hoerbuch' && audioMin>0) html += '<span>'+formatDuration(audioMin)+'</span>';
+      else if(b.pages>0) html += '<span>'+b.pages+' Seiten</span>';
+      if(b.dateFinished) html += '<span>'+formatDateDMY(b.dateFinished)+'</span>';
+      html += '</div>';
+    }
+    html += '<div style="margin-top:8px;">';
+    html += '<span class="badge">'+STATUS_LABEL[b.status]+'</span>';
+    if(b.format) html += '<span class="badge mono">'+FORMAT_LABEL[b.format]+'</span>';
+    html += '</div>';
+    html += '</div></div>';
+
+    var sibs = siblingsInSeries(b);
+    if(b.seriesName && sibs.length>1){
+      var readCount = sibs.filter(function(s){return s.status==='read';}).length;
+      html += '<button class="series-link" data-open-series="'+escapeHtml(b.seriesName)+'">Buchreihe: '+escapeHtml(b.seriesName)+' ('+readCount+' von '+sibs.length+' gelesen) ›</button>';
+    }
+
+    if(b.notes) html += '<p class="detail-notes">'+escapeHtml(b.notes)+'</p>';
+
+    html += '<button class="primary-btn" data-nav="edit" data-id="'+b.id+'">Bearbeiten</button>';
+    html += '<button class="secondary-btn" data-nav="shelf" style="margin-top:10px;">Zum Regal</button>';
+    html += '</div>';
+    return html;
+  }
+
+  /* ---------- series pages ---------- */
+  function allSeriesMap(){
+    var map = {};
+    state.books.forEach(function(b){
+      var name = (b.seriesName||'').trim();
+      if(!name) return;
+      var key = name.toLowerCase();
+      if(!map[key]) map[key] = {name:name, books:[]};
+      map[key].books.push(b);
+    });
+    return map;
+  }
+
+  function renderSeriesOverviewPage(){
+    var map = allSeriesMap();
+    var keys = Object.keys(map).sort(function(a,b){ return map[a].name.localeCompare(map[b].name); });
+    var html = '<div class="page">';
+    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<h2 style="font-size:22px;margin-bottom:16px;">Buchreihen</h2>';
+    if(keys.length===0){
+      html += '<div class="empty-state">Noch keine Buchreihe erfasst.</div>';
+    } else {
+      keys.forEach(function(k){
+        var s = map[k];
+        var readCount = s.books.filter(function(b){return b.status==='read';}).length;
+        html += '<button class="series-row" data-open-series="'+escapeHtml(s.name)+'">'+
+          '<span class="sname">'+escapeHtml(s.name)+'</span>'+
+          '<span class="scount">'+readCount+'/'+s.books.length+'</span>'+
+          '</button>';
+      });
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderSeriesDetailPage(name){
+    var map = allSeriesMap();
+    var s = map[(name||'').trim().toLowerCase()];
+    var html = '<div class="page">';
+    html += '<button class="back-link" data-nav="series">‹ Reihen</button>';
+    html += '<h2 style="font-size:22px;margin-bottom:16px;">'+escapeHtml(name||'')+'</h2>';
+    if(!s || s.books.length===0){
+      html += '<div class="empty-state">Keine Bücher gefunden.</div>';
+    } else {
+      var sorted = s.books.slice().sort(function(a,b){
+        var an = parseFloat(a.seriesNumber), bn = parseFloat(b.seriesNumber);
+        if(isNaN(an) && isNaN(bn)) return 0;
+        if(isNaN(an)) return 1;
+        if(isNaN(bn)) return -1;
+        return an-bn;
+      });
+      html += '<div class="flat-list">';
+      sorted.forEach(function(b){
+        html += '<button data-open="'+b.id+'" style="display:flex; gap:10px; align-items:center; text-align:left; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 12px; width:100%;">'+
+          '<div class="mono" style="width:26px;text-align:center;color:var(--gold);font-size:13px;flex-shrink:0;">'+(b.seriesNumber?'#'+escapeHtml(String(b.seriesNumber)):'—')+'</div>'+
+          '<div style="flex:1;min-width:0;">'+
+          '<div style="font-weight:600;font-size:15px;">'+escapeHtml(b.title)+'</div>'+
+          '<div class="mono" style="font-size:11px;color:var(--cream-dim);">'+STATUS_LABEL[b.status]+'</div>'+
+          '</div></button>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  /* ---------- form page ---------- */
+  var formDraft = null;
+  var formError = null;
+  var formPlaceholder = null;
+
+  var PLACEHOLDER_POOL = [
+    {title:'Der Herr der Ringe', first:'J.R.R.', last:'Tolkien', series:'Der Herr der Ringe'},
+    {title:'1984', first:'George', last:'Orwell'},
+    {title:'Stolz und Vorurteil', first:'Jane', last:'Austen'},
+    {title:'Krieg und Frieden', first:'Leo', last:'Tolstoi'},
+    {title:'Harry Potter und der Stein der Weisen', first:'Joanne K.', last:'Rowling', series:'Harry Potter'},
+    {title:'Die Verwandlung', first:'Franz', last:'Kafka'},
+    {title:'Der Report der Magd', first:'Margaret', last:'Atwood'},
+    {title:'Das Parfum', first:'Patrick', last:'Süskind'},
+    {title:'Der Alchimist', first:'Paulo', last:'Coelho'},
+    {title:'Der Prozess', first:'Franz', last:'Kafka'},
+    {title:'Die Säulen der Erde', first:'Ken', last:'Follett', series:'Kingsbridge'},
+    {title:'Shantaram', first:'Gregory David', last:'Roberts'},
+    {title:'Der Medicus', first:'Noah', last:'Gordon'},
+    {title:'Tintenherz', first:'Cornelia', last:'Funke', series:'Tintenwelt'},
+    {title:'Momo', first:'Michael', last:'Ende'},
+    {title:'Die unendliche Geschichte', first:'Michael', last:'Ende'},
+    {title:'Schachnovelle', first:'Stefan', last:'Zweig'},
+    {title:'Der kleine Prinz', first:'Antoine', last:'de Saint-Exupéry'},
+    {title:'Faust', first:'Johann Wolfgang', last:'von Goethe'},
+    {title:'Effi Briest', first:'Theodor', last:'Fontane'},
+    {title:'Buddenbrooks', first:'Thomas', last:'Mann'},
+    {title:'Der Steppenwolf', first:'Hermann', last:'Hesse'},
+    {title:'Siddhartha', first:'Hermann', last:'Hesse'},
+    {title:'Die Blechtrommel', first:'Günter', last:'Grass'},
+    {title:'Der Vorleser', first:'Bernhard', last:'Schlink'},
+    {title:'Gut gegen Nordwind', first:'Daniel', last:'Glattauer'},
+    {title:'Tschick', first:'Wolfgang', last:'Herrndorf'},
+    {title:'Die Känguru-Chroniken', first:'Marc-Uwe', last:'Kling', series:'Känguru-Chroniken'},
+    {title:'Diebe im Olymp', first:'Rick', last:'Riordan', series:'Percy Jackson'},
+    {title:'Das Mädchen mit dem Perlenohrring', first:'Tracy', last:'Chevalier'},
+    {title:'Sakrileg', first:'Dan', last:'Brown', series:'Robert Langdon'},
+    {title:'Der Hobbit', first:'J.R.R.', last:'Tolkien'},
+    {title:'Die Tribute von Panem', first:'Suzanne', last:'Collins', series:'Die Tribute von Panem'},
+    {title:'Shutter Island', first:'Dennis', last:'Lehane'},
+    {title:'Der Distelfink', first:'Donna', last:'Tartt'},
+    {title:'Nachtzug nach Lissabon', first:'Pascal', last:'Mercier'},
+    {title:'Der Trafikant', first:'Robert', last:'Seethaler'},
+    {title:'Wüstenblume', first:'Waris', last:'Dirie'}
+  ];
+
+  function randomPlaceholder(){
+    return PLACEHOLDER_POOL[Math.floor(Math.random()*PLACEHOLDER_POOL.length)];
+  }
+
+  function newDraft(){
+    return {id:null, title:'', authorFirst:'', authorLast:'', status:'wishlist', genreIds:[],
+      rating:0, pages:'', audioHours:'', audioMinutes:'', dateFinished:'', notes:'', format:'', seriesName:'', seriesNumber:'',
+      pinned:false, wantToBuy:false, dateAdded: new Date().toISOString()};
+  }
+
+  function renderFormPage(existing){
+    if(!formDraft || (existing && formDraft.id!==existing.id) || (!existing && formDraft.id!==null)){
+      formDraft = existing ? Object.assign({}, existing, {
+        genreIds:(existing.genreIds||[]).slice()
+      }) : newDraft();
+      formPlaceholder = existing ? null : randomPlaceholder();
+      formError = null;
+    }
+    var d = formDraft;
+    var isEdit = !!existing;
+    var html = '<div class="page">';
+    html += '<button class="back-link" id="cancelForm">✕ Abbrechen</button>';
+    html += '<h2 style="font-size:22px;margin-bottom:18px;">'+(isEdit?'Bearbeiten':'Neues Buch')+'</h2>';
+
+    html += '<div class="field"><label>Titel</label><input type="text" id="f_title" value="'+escapeHtml(d.title)+'" placeholder="'+escapeHtml(formPlaceholder?formPlaceholder.title:'Titel eingeben')+'"></div>';
+
+    html += '<div class="row-2">';
+    html += '<div class="field"><label>Buchreihe (optional)</label><input type="text" id="f_series" value="'+escapeHtml(d.seriesName||'')+'" placeholder="'+escapeHtml((formPlaceholder&&formPlaceholder.series)?formPlaceholder.series:'z.B. Der Herr der Ringe')+'"></div>';
+    html += '<div class="field"><label>Band (optional)</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="f_seriesnum" value="'+escapeHtml(String(d.seriesNumber||''))+'" placeholder="1"></div>';
+    html += '</div>';
+
+    html += '<div class="row-2">';
+    html += '<div class="field"><label>Vorname</label><input type="text" id="f_first" value="'+escapeHtml(d.authorFirst)+'" placeholder="'+escapeHtml(formPlaceholder?formPlaceholder.first:'Vorname')+'"></div>';
+    html += '<div class="field"><label>Nachname</label><input type="text" id="f_last" value="'+escapeHtml(d.authorLast)+'" placeholder="'+escapeHtml(formPlaceholder?formPlaceholder.last:'Nachname')+'"></div>';
+    html += '</div>';
+
+    html += '<div class="field"><label>Status</label><div class="status-row">';
+    ['wishlist','toread','reading','read'].forEach(function(s){
+      html += '<button data-set-status="'+s+'" class="'+(d.status===s?'active':'')+'">'+STATUS_LABEL[s]+'</button>';
+    });
+    html += '</div></div>';
+
+    html += '<div style="min-height:3.0625rem;">';
+    if(d.status==='toread'){
+      html += '<button class="pin-toggle'+(d.pinned?' active':'')+'" id="togglePin">📌 '+(d.pinned?'Als "nächstes lesen" markiert':'Als "nächstes lesen" markieren')+'</button>';
+    } else if(d.status==='wishlist'){
+      html += '<button class="pin-toggle'+(d.wantToBuy?' active':'')+'" id="toggleBuy">$ '+(d.wantToBuy?'Als "nächstes kaufen" markiert':'Als "nächstes kaufen" markieren')+'</button>';
+    }
+    html += '</div>';
+
+    html += '<div class="field"><label>Genres</label><div class="genre-picker-grid">';
+    state.genres.forEach(function(g){
+      var sel = (d.genreIds||[]).indexOf(g.id)!==-1;
+      html += '<button class="genre-chip'+(sel?' selected':'')+'" data-toggle-genre="'+g.id+'"><span class="dot" style="background:'+g.color+';"></span>'+escapeHtml(g.name)+'</button>';
+    });
+    html += '</div></div>';
+
+    if(d.status==='read' || d.status==='toread' || d.status==='reading'){
+      html += '<div class="field"><label>Format</label><div class="status-row">';
+      ['print','ebook','hoerbuch'].forEach(function(f){
+        html += '<button data-set-format="'+f+'" class="'+(d.format===f?'active':'')+'">'+FORMAT_LABEL[f]+'</button>';
+      });
+      html += '</div></div>';
+    }
+
+    if(d.status==='read'){
+      html += '<div class="field"><label>Bewertung</label>'+starsHTML(d.rating||0,false,26)+'</div>';
+      html += '<div class="row-2">';
+      if(d.format==='hoerbuch'){
+        html += '<div class="field"><label>Stunden</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="f_audioh" value="'+escapeHtml(String(d.audioHours||''))+'" placeholder="8"></div>';
+        html += '<div class="field"><label>Minuten</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="f_audiom" value="'+escapeHtml(String(d.audioMinutes||''))+'" placeholder="30"></div>';
+      } else {
+        html += '<div class="field"><label>Seiten</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="f_pages" value="'+escapeHtml(String(d.pages||''))+'" placeholder=""></div>';
+        html += '<div class="field"><label>Gelesen am</label><input type="date" id="f_date" value="'+escapeHtml(d.dateFinished||'')+'"></div>';
+      }
+      html += '</div>';
+      if(d.format==='hoerbuch'){
+        html += '<div class="field"><label>Gelesen am</label><input type="date" id="f_date" value="'+escapeHtml(d.dateFinished||'')+'"></div>';
+      }
+    }
+    html += '<div class="field"><label>Notizen</label><textarea id="f_notes" placeholder="Worum geht\'s? Wo liegt es? Was hat dir gefallen?">'+escapeHtml(d.notes||'')+'</textarea></div>';
+
+    html += '<div class="btn-row">';
+    html += '<button class="secondary-btn" id="cancelForm2">Abbrechen</button>';
+    html += '<button class="primary-btn" id="saveForm">Speichern</button>';
+    html += '</div>';
+    if(formError) html += '<div class="form-error">'+escapeHtml(formError)+'</div>';
+
+    if(isEdit) html += '<button class="ghost-danger" id="deleteBook">🗑 Buch löschen</button>';
+
+    html += '</div>';
+    return html;
+  }
+
+  function missingFields(d){
+    var missing = [];
+    if(!d.title.trim()) missing.push('Titel');
+    if(!d.authorFirst.trim()) missing.push('Vorname');
+    if(!d.authorLast.trim()) missing.push('Nachname');
+    if(!(d.genreIds||[]).length) missing.push('mindestens ein Genre');
+    if(d.status==='read'){
+      if(!d.format) missing.push('Format');
+      else if(d.format==='hoerbuch'){
+        var totalMin = (parseInt(d.audioHours,10)||0)*60 + (parseInt(d.audioMinutes,10)||0);
+        if(totalMin<=0) missing.push('Hörbuch-Dauer');
+      } else {
+        if(!d.pages || parseInt(d.pages,10)<=0) missing.push('Seiten');
+      }
+      if(!d.dateFinished) missing.push('Gelesen am');
+      if(!d.rating || d.rating<=0) missing.push('Bewertung');
+    } else if(d.status==='toread' || d.status==='reading'){
+      if(!d.format) missing.push('Format');
+    }
+    return missing;
+  }
+
+  /* ---------- genre manager page ---------- */
+  function renderGenrePage(){
+    var html = '<div class="page">';
+    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<h2 style="font-size:22px;margin-bottom:6px;">Genres</h2>';
+    html += '<p style="color:var(--cream-dim);font-size:13px;margin-top:0;margin-bottom:16px;">Farbe und Name jederzeit änderbar.</p>';
+
+    html += '<div class="field"><label>Farbdarstellung bei mehreren Genres</label><div class="status-row">';
+    [['main','Hauptgenre'],['stripes','Alle Farbstreifen'],['gradient','Verlauf']].forEach(function(o){
+      html += '<button data-set-colormode="'+o[0]+'" class="'+(state.colorMode===o[0]?'active':'')+'">'+o[1]+'</button>';
+    });
+    html += '</div></div>';
+
+    html += '<p style="color:var(--cream-dim);font-size:11.5px;margin-top:-10px;margin-bottom:14px;">Reihenfolge per Ziehen am ⠿-Griff ändern.</p>';
+
+    state.genres.forEach(function(g, idx){
+      html += '<div class="genre-row" data-genre-row="'+g.id+'" data-genre-idx="'+idx+'">';
+      html += '<span class="drag-handle" data-drag-handle="'+g.id+'">⠿</span>';
+      html += '<input type="color" data-genre-color="'+g.id+'" value="'+g.color+'">';
+      html += '<input type="text" data-genre-name="'+g.id+'" value="'+escapeHtml(g.name)+'">';
+      html += '<button data-genre-delete="'+g.id+'">🗑</button>';
+      html += '</div>';
+    });
+    html += '<div class="add-genre-row">';
+    html += '<input type="text" id="newGenreName" placeholder="Neues Genre …">';
+    html += '<input type="color" id="newGenreColor" value="#4A5A7A" style="width:40px;border:none;background:none;">';
+    html += '<button class="icon-btn" id="addGenre" style="background:var(--gold);color:var(--bg);border:none;">＋</button>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  /* ---------- settings page (theme, font, backup) ---------- */
+  function renderSettingsPage(){
+    var html = '<div class="page">';
+    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<h2 style="font-size:22px;margin-bottom:16px;">Einstellungen</h2>';
+
+    html += '<div class="settings-card">';
+    html += '<h3>Darstellung</h3>';
+    html += '<div class="status-row">';
+    [['dark','Dunkel'],['light','Hell']].forEach(function(o){
+      html += '<button data-set-theme="'+o[0]+'" class="'+(state.theme===o[0]?'active':'')+'">'+o[1]+'</button>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="settings-card">';
+    html += '<h3>Schriftgröße</h3>';
+    html += '<div class="slider-row"><input type="range" id="fontSlider" min="0.85" max="1.3" step="0.05" value="'+state.fontScale+'">'+
+      '<span class="slider-val">'+Math.round(state.fontScale*100)+'%</span></div>';
+    html += '</div>';
+
+    html += '<div class="settings-card">';
+    html += '<h3>Sichern &amp; Wiederherstellen</h3>';
+    var daysSinceBackup = state.lastBackup ? Math.floor((Date.now()-new Date(state.lastBackup).getTime())/86400000) : Infinity;
+    var backupIsStale = daysSinceBackup>=30;
+    var lastSavedText = state.lastBackup ? 'Zuletzt gesichert: '+formatDateTime(state.lastBackup) : 'Noch nie gesichert';
+    if(backupIsStale) lastSavedText = '⚠️ ' + lastSavedText + (state.lastBackup ? ' (vor '+daysSinceBackup+' Tagen)' : '');
+    html += '<div class="last-saved" style="'+(backupIsStale?'color:var(--oxblood);':'')+'">'+lastSavedText+'</div>';
+    html += '<p style="margin-top:14px;">Erstellt eine JSON-Datei mit allen Büchern und Genres.</p>';
+    html += '<button class="primary-btn" id="exportBtn">Als Datei sichern</button>';
+    html += '<p style="margin-top:16px;">Eine zuvor gesicherte JSON-Datei einlesen. Wird mit dem Bestand zusammengeführt, keine Duplikate.</p>';
+    html += '<button class="secondary-btn" id="importBtn">Datei auswählen</button>';
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  function formatDateTime(iso){
+    var d = new Date(iso);
+    var pad = function(n){return n<10?'0'+n:n;};
+    return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' um '+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+
+  /* ---------- profile / statistics page ---------- */
+  function computeAggregate(list){
+    var totalBooks = list.length;
+    var withPages = list.filter(function(b){ return Number(b.pages)>0; });
+    var totalPages = withPages.reduce(function(s,b){return s+Number(b.pages);},0);
+    var avgRating = totalBooks ? (list.reduce(function(s,b){return s+(b.rating||0);},0)/totalBooks) : 0;
+    var avgPages = withPages.length ? Math.round(totalPages/withPages.length) : 0;
+
+    var genreCounts = {};
+    list.forEach(function(b){ genreNamesForBook(b).forEach(function(n){ genreCounts[n]=(genreCounts[n]||0)+1; }); });
+    var topGenre = null, topGenreCount = 0;
+    Object.keys(genreCounts).forEach(function(g){ if(genreCounts[g]>topGenreCount){topGenreCount=genreCounts[g]; topGenre=g;} });
+
+    var authorCounts = {};
+    list.forEach(function(b){
+      var name = (b.authorFirst+' '+b.authorLast).trim();
+      if(!name) return;
+      authorCounts[name] = (authorCounts[name]||0)+1;
+    });
+    var topAuthor = null, topAuthorCount = 0;
+    Object.keys(authorCounts).forEach(function(a){ if(authorCounts[a]>topAuthorCount){topAuthorCount=authorCounts[a]; topAuthor=a;} });
+
+    var longest = null, shortest = null;
+    withPages.forEach(function(b){
+      if(!longest || Number(b.pages)>Number(longest.pages)) longest=b;
+      if(!shortest || Number(b.pages)<Number(shortest.pages)) shortest=b;
+    });
+
+    var printPages = list.filter(function(b){return b.format==='print';}).reduce(function(s,b){return s+(Number(b.pages)||0);},0);
+    var stackMm = printPages*0.055;
+
+    var ebookPages = list.filter(function(b){return b.format==='ebook';}).reduce(function(s,b){return s+(Number(b.pages)||0);},0);
+    var ebookMeters = ebookPages*1.75*0.1;
+
+    var audioMinutes = list.filter(function(b){return b.format==='hoerbuch';})
+      .reduce(function(s,b){return s+((Number(b.audioHours)||0)*60 + (Number(b.audioMinutes)||0));},0);
+
+    return {
+      totalBooks:totalBooks, totalPages:totalPages, avgRating:avgRating, avgPages:avgPages,
+      topGenre:topGenre, topAuthor:topAuthor, topAuthorCount:topAuthorCount,
+      longest:longest, shortest:shortest, stackMm:stackMm, ebookMeters:ebookMeters, audioMinutes:audioMinutes
+    };
+  }
+
+  function formatDuration(totalMinutes){
+    totalMinutes = Math.round(totalMinutes);
+    var days = Math.floor(totalMinutes/1440);
+    var rem = totalMinutes%1440;
+    var hours = Math.floor(rem/60);
+    var mins = rem%60;
+    var parts = [];
+    if(days>0) parts.push(days+' Tag'+(days!==1?'e':''));
+    if(hours>0 || days>0) parts.push(hours+' Stunde'+(hours!==1?'n':''));
+    parts.push(mins+' Minute'+(mins!==1?'n':''));
+    if(parts.length===1) return parts[0];
+    return parts.slice(0,-1).join(' ') + ' und ' + parts[parts.length-1];
+  }
+
+  function computeStats(){
+    var read = state.books.filter(function(b){return b.status==='read';});
+    var overall = computeAggregate(read);
+
+    var byYear = {};
+    read.forEach(function(b){
+      var y = (b.dateFinished||'').slice(0,4) || 'Unbekannt';
+      (byYear[y] = byYear[y]||[]).push(b);
+    });
+    var years = Object.keys(byYear).sort(function(a,b){return b.localeCompare(a);});
+    var yearAgg = {};
+    years.forEach(function(y){ yearAgg[y] = computeAggregate(byYear[y]); });
+
+    var bestYear = null, bestYearBooks = -1, worstYear = null, worstYearBooks = Infinity;
+    years.forEach(function(y){
+      var n = yearAgg[y].totalBooks;
+      if(n>bestYearBooks){bestYearBooks=n; bestYear=y;}
+      if(n<worstYearBooks){worstYearBooks=n; worstYear=y;}
+    });
+
+    overall.years = years;
+    overall.yearAgg = yearAgg;
+    overall.bestYear = bestYear; overall.bestYearBooks = bestYearBooks;
+    overall.worstYear = (years.length>1) ? worstYear : null;
+    overall.worstYearBooks = worstYearBooks;
+    return overall;
+  }
+
+  function renderProfilePage(){
+    var s = computeStats();
+    var html = '<div class="page">';
+    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<h2 style="font-size:22px;margin-bottom:16px;">Profil &amp; Statistik</h2>';
+
+    if(s.totalBooks===0){
+      html += '<div class="empty-state">Noch keine gelesenen Bücher – hier erscheinen deine Statistiken, sobald du das erste Buch als "Gelesen" markierst.</div>';
+      html += '</div>';
+      return html;
+    }
+
+    html += '<div class="stat-grid">';
+    html += statCard(s.totalBooks, 'Bücher gelesen');
+    html += statCard(s.totalPages.toLocaleString('de-DE'), 'Seiten gelesen');
+    html += statCard(s.avgRating.toFixed(1)+' ★', 'Ø Bewertung');
+    html += statCard(s.avgPages, 'Ø Seiten / Buch');
+    if(s.topGenre) html += statCard(s.topGenre, 'Lieblingsgenre', true);
+    if(s.topAuthor) html += statCard(s.topAuthor+' ('+s.topAuthorCount+')', 'Meistgelesener Autor', true);
+    if(s.longest) html += statCard(s.longest.pages+' S.', 'Längstes: '+s.longest.title);
+    if(s.shortest) html += statCard(s.shortest.pages+' S.', 'Kürzestes: '+s.shortest.title);
+    if(s.bestYear) html += statCard(s.bestYear, 'Bestes Lesejahr ('+s.bestYearBooks+' Bücher)');
+    if(s.worstYear) html += statCard(s.worstYear, 'Schlechtestes Lesejahr ('+s.worstYearBooks+' Bücher)');
+    html += '</div>';
+
+    html += renderFunFacts(s);
+
+    if(s.years.length){
+      html += '<h3 style="font-size:15px;margin:20px 0 8px;color:var(--cream-dim);">Nach Jahr</h3>';
+      s.years.forEach(function(y){
+        var yd = s.yearAgg[y];
+        html += '<button class="year-stat-row" data-year-toggle="'+escapeHtml(y)+'" style="width:100%;border:none;background:none;cursor:pointer;">'+
+          '<span class="y">'+escapeHtml(y)+' '+(state.expandedYear===y?'▾':'▸')+'</span>'+
+          '<span>'+yd.totalBooks+' Bücher · '+yd.totalPages.toLocaleString('de-DE')+' S.'+(yd.avgRating?' · Ø '+yd.avgRating.toFixed(1)+' ★':'')+(yd.topGenre?' · '+escapeHtml(yd.topGenre):'')+'</span></button>';
+        if(state.expandedYear===y){
+          html += '<div style="padding:12px 0 4px;">';
+          html += '<div class="stat-grid">';
+          html += statCard(yd.totalBooks, 'Bücher gelesen');
+          html += statCard(yd.totalPages.toLocaleString('de-DE'), 'Seiten gelesen');
+          html += statCard(yd.avgRating.toFixed(1)+' ★', 'Ø Bewertung');
+          html += statCard(yd.avgPages, 'Ø Seiten / Buch');
+          if(yd.topGenre) html += statCard(yd.topGenre, 'Lieblingsgenre', true);
+          if(yd.topAuthor) html += statCard(yd.topAuthor+' ('+yd.topAuthorCount+')', 'Meistgelesener Autor', true);
+          if(yd.longest) html += statCard(yd.longest.pages+' S.', 'Längstes: '+yd.longest.title);
+          if(yd.shortest) html += statCard(yd.shortest.pages+' S.', 'Kürzestes: '+yd.shortest.title);
+          html += '</div>';
+          html += renderFunFacts(yd);
+          html += '</div>';
+        }
+      });
+
+      html += '<div class="field" style="margin-top:20px;"><label>Jahresrückblick als Bild</label>';
+      html += '<div class="row-2" style="align-items:flex-end;">';
+      html += '<div><select class="sort-select" id="reviewYearSelect" style="width:100%;padding:9px;">';
+      s.years.forEach(function(y){ html += '<option value="'+y+'">'+y+'</option>'; });
+      html += '</select></div>';
+      html += '<div><button class="primary-btn" id="genReviewImg">Erstellen</button></div>';
+      html += '</div></div>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  function renderFunFacts(agg){
+    var html = '';
+    if(agg.stackMm>0){
+      var m = agg.stackMm/1000;
+      html += '<div class="funfact-card"><div class="ff-value">'+m.toFixed(2)+' m</div>'+
+        '<div class="ff-label">Höhe des Print Bücherstapels</div></div>';
+    }
+    if(agg.ebookMeters>0){
+      html += '<div class="funfact-card"><div class="ff-value">'+agg.ebookMeters.toFixed(2)+' m</div>'+
+        '<div class="ff-label">Zurückgelegte E-Book-Strecke</div></div>';
+    }
+    if(agg.audioMinutes>0){
+      html += '<div class="funfact-card"><div class="ff-value" style="font-size:19px;">'+formatDuration(agg.audioMinutes)+'</div>'+
+        '<div class="ff-label">Hörbuch-Gesamtzeit</div></div>';
+    }
+    return html;
+  }
+
+  function statCard(value, label, full){
+    return '<div class="stat-card'+(full?' stat-full':'')+'"><div class="stat-value">'+escapeHtml(String(value))+'</div><div class="stat-label">'+escapeHtml(label)+'</div></div>';
+  }
+
+  function generateYearReviewImage(year){
+    var s = computeStats();
+    var yd = s.yearAgg[year];
+    if(!yd) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = 800; canvas.height = 1000;
+    var ctx = canvas.getContext('2d');
+
+    var grad = ctx.createLinearGradient(0,0,0,1000);
+    grad.addColorStop(0,'#1F332A'); grad.addColorStop(1,'#182620');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,800,1000);
+
+    ctx.strokeStyle = '#C9A24B'; ctx.lineWidth = 2;
+    ctx.strokeRect(40,40,720,920);
+
+    ctx.fillStyle = '#C9A24B';
+    ctx.font = 'italic 34px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Mein Lesejahr', 400, 150);
+    ctx.font = 'bold 90px Georgia, serif';
+    ctx.fillText(year, 400, 250);
+
+    var lines = [
+      [yd.totalBooks, 'Bücher gelesen'],
+      [yd.totalPages.toLocaleString('de-DE'), 'Seiten gelesen'],
+      [(yd.avgRating ? yd.avgRating.toFixed(1)+' ★' : '—'), 'Ø Bewertung'],
+      [(yd.topGenre || '—'), 'Lieblingsgenre']
+    ];
+    var y0 = 380;
+    lines.forEach(function(l, i){
+      var yy = y0 + i*130;
+      ctx.fillStyle = '#EDE6D6';
+      ctx.font = 'bold 54px Georgia, serif';
+      ctx.fillText(String(l[0]), 400, yy);
+      ctx.fillStyle = '#B9B0A0';
+      ctx.font = '20px "Courier New", monospace';
+      ctx.fillText(l[1].toUpperCase(), 400, yy+34);
+    });
+
+    ctx.fillStyle = '#B9B0A0';
+    ctx.font = '16px "Courier New", monospace';
+    ctx.fillText('Mein Regal', 400, 920);
+
+    canvas.toBlob(function(blob){
+      var file = new File([blob], 'lesejahr-'+year+'.png', {type:'image/png'});
+      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file], title:'Mein Lesejahr '+year}).catch(function(){});
+      } else {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'lesejahr-'+year+'.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      }
+    }, 'image/png');
+  }
+
+  /* ---------- event handling ---------- */
+  function attachHandlers(){
+    var searchInput = document.getElementById('searchInput');
+    if(searchInput){
+      searchInput.addEventListener('input', function(e){ state.query = e.target.value; render(); restoreFocus('searchInput'); });
+    }
+    var clearSearch = document.getElementById('clearSearch');
+    if(clearSearch) clearSearch.addEventListener('click', function(){ state.query=''; render(); });
+
+    var newBookBtn = document.getElementById('newBook');
+    if(newBookBtn) newBookBtn.addEventListener('click', function(){ formDraft=null; formError=null; state.view={mode:'form'}; render(); });
+
+    var openGenres = document.getElementById('openGenres');
+    if(openGenres) openGenres.addEventListener('click', function(){ state.view={mode:'genres'}; render(); });
+    var openProfile = document.getElementById('openProfile');
+    if(openProfile) openProfile.addEventListener('click', function(){ state.view={mode:'profile'}; render(); });
+    var openSettings = document.getElementById('openSettings');
+    if(openSettings) openSettings.addEventListener('click', function(){ state.view={mode:'settings'}; render(); });
+
+    document.querySelectorAll('[data-status]').forEach(function(el){
+      el.addEventListener('click', function(){
+        state.statusFilter = el.getAttribute('data-status');
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-open]').forEach(function(el){
+      el.addEventListener('click', function(){ state.view={mode:'detail', id: el.getAttribute('data-open')}; render(); });
+    });
+    document.querySelectorAll('[data-open-series]').forEach(function(el){
+      el.addEventListener('click', function(){ state.view={mode:'seriesDetail', name: el.getAttribute('data-open-series')}; render(); });
+    });
+
+    document.querySelectorAll('[data-nav]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var nav = el.getAttribute('data-nav');
+        if(nav==='edit'){ state.view={mode:'form', id: el.getAttribute('data-id')}; }
+        else { state.view={mode:nav}; }
+        render();
+      });
+    });
+
+    var cancelForm = document.getElementById('cancelForm');
+    var cancelForm2 = document.getElementById('cancelForm2');
+    [cancelForm, cancelForm2].forEach(function(btn){
+      if(btn) btn.addEventListener('click', function(){ formDraft=null; formError=null; state.view = state.view.id ? {mode:'detail', id:state.view.id} : {mode:'shelf'}; render(); });
+    });
+
+    bindText('f_title', 'title');
+    bindText('f_first', 'authorFirst');
+    bindText('f_last', 'authorLast');
+    bindText('f_pages', 'pages');
+    bindText('f_audioh', 'audioHours');
+    bindText('f_audiom', 'audioMinutes');
+    bindDate('f_date', 'dateFinished');
+    bindText('f_notes', 'notes');
+    bindText('f_series', 'seriesName');
+    bindText('f_seriesnum', 'seriesNumber');
+
+    document.querySelectorAll('[data-set-status]').forEach(function(el){
+      el.addEventListener('click', function(){ formDraft.status = el.getAttribute('data-set-status'); render(); });
+    });
+    document.querySelectorAll('[data-set-format]').forEach(function(el){
+      el.addEventListener('click', function(){ formDraft.format = el.getAttribute('data-set-format'); render(); });
+    });
+    var togglePin = document.getElementById('togglePin');
+    if(togglePin) togglePin.addEventListener('click', function(){
+      var newVal = !formDraft.pinned;
+      if(newVal){ state.books.forEach(function(b){ if(b.id!==formDraft.id) b.pinned=false; }); }
+      formDraft.pinned = newVal;
+      render();
+    });
+    var toggleBuy = document.getElementById('toggleBuy');
+    if(toggleBuy) toggleBuy.addEventListener('click', function(){
+      var newVal = !formDraft.wantToBuy;
+      if(newVal){ state.books.forEach(function(b){ if(b.id!==formDraft.id) b.wantToBuy=false; }); }
+      formDraft.wantToBuy = newVal;
+      render();
+    });
+
+    document.querySelectorAll('[data-toggle-genre]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var id = el.getAttribute('data-toggle-genre');
+        if(!formDraft.genreIds) formDraft.genreIds=[];
+        var idx = formDraft.genreIds.indexOf(id);
+        if(idx===-1) formDraft.genreIds.push(id); else formDraft.genreIds.splice(idx,1);
+        render();
+      });
+    });
+
+    document.querySelectorAll('.star-half-btn').forEach(function(el){
+      el.addEventListener('click', function(){
+        var val = parseFloat(el.getAttribute('data-star'));
+        if(formDraft) formDraft.rating = (formDraft.rating===val) ? 0 : val;
+        render();
+      });
+    });
+
+    var saveForm = document.getElementById('saveForm');
+    if(saveForm) saveForm.addEventListener('click', function(){
+      var d = formDraft;
+      var missing = missingFields(d);
+      if(missing.length){
+        formError = 'Bitte noch ausfüllen: ' + missing.join(', ');
+        render();
+        return;
+      }
+      formError = null;
+      d.pages = d.pages ? (parseInt(d.pages,10) || 0) : 0;
+      d.audioHours = d.audioHours ? (parseInt(d.audioHours,10) || 0) : 0;
+      d.audioMinutes = d.audioMinutes ? (parseInt(d.audioMinutes,10) || 0) : 0;
+      d.seriesNumber = (d.seriesNumber!==undefined && d.seriesNumber!=='') ? (parseFloat(d.seriesNumber) || '') : '';
+      if(d.status!=='toread') d.pinned = false;
+      if(d.status!=='wishlist') d.wantToBuy = false;
+      if(!d.id){ d.id = uid(); d.dateAdded = new Date().toISOString(); state.books.unshift(d); }
+      else {
+        var idx = state.books.findIndex(function(b){return b.id===d.id;});
+        if(idx>-1) state.books[idx] = d;
+      }
+      persistBooks();
+      var savedId = d.id;
+      var savedStatus = d.status;
+      formDraft = null;
+      state.view = (savedStatus==='read') ? {mode:'detail', id: savedId} : {mode:'shelf'};
+      render();
+    });
+
+    var deleteBook = document.getElementById('deleteBook');
+    if(deleteBook) deleteBook.addEventListener('click', function(){
+      if(!formDraft) return;
+      if(!confirm('"'+formDraft.title+'" wirklich löschen? Das kann nicht rückgängig gemacht werden.')) return;
+      state.books = state.books.filter(function(b){return b.id!==formDraft.id;});
+      persistBooks();
+      formDraft=null;
+      state.view={mode:'shelf'};
+      render();
+    });
+
+    document.querySelectorAll('[data-set-colormode]').forEach(function(el){
+      el.addEventListener('click', function(){
+        state.colorMode = el.getAttribute('data-set-colormode');
+        saveJSON(LS_COLORMODE, state.colorMode);
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-genre-name]').forEach(function(el){
+      el.addEventListener('change', function(){
+        var g = genreById(el.getAttribute('data-genre-name'));
+        if(g){ g.name = el.value; persistGenres(); }
+      });
+    });
+    document.querySelectorAll('[data-genre-color]').forEach(function(el){
+      el.addEventListener('input', function(){
+        var g = genreById(el.getAttribute('data-genre-color'));
+        if(g){ g.color = el.value; persistGenres(); render(); }
+      });
+    });
+    document.querySelectorAll('[data-genre-delete]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var id = el.getAttribute('data-genre-delete');
+        var g = genreById(id);
+        var usageCount = state.books.filter(function(b){ return (b.genreIds||[]).indexOf(id)!==-1; }).length;
+        var msg = usageCount>0
+          ? '"'+(g?g.name:'Genre')+'" wird bei '+usageCount+' Buch'+(usageCount===1?'':'ern')+' verwendet. Trotzdem löschen?'
+          : '"'+(g?g.name:'Genre')+'" wirklich löschen?';
+        if(!confirm(msg)) return;
+        state.genres = state.genres.filter(function(gn){return gn.id!==id;});
+        state.books.forEach(function(b){
+          if(b.genreIds){ var idx = b.genreIds.indexOf(id); if(idx!==-1) b.genreIds.splice(idx,1); }
+        });
+        persistGenres();
+        persistBooks();
+        render();
+      });
+    });
+    var addGenre = document.getElementById('addGenre');
+    if(addGenre) addGenre.addEventListener('click', function(){
+      var nameEl = document.getElementById('newGenreName');
+      var colorEl = document.getElementById('newGenreColor');
+      var name = nameEl.value.trim();
+      if(!name) return;
+      var exists = state.genres.some(function(g){ return g.name.trim().toLowerCase()===name.toLowerCase(); });
+      if(exists){ showToast('Genre "'+name+'" gibt es schon'); return; }
+      state.genres.push({id: uid(), name: name, color: colorEl.value});
+      persistGenres();
+      render();
+    });
+
+    document.querySelectorAll('[data-drag-handle]').forEach(function(handle){
+      handle.addEventListener('pointerdown', function(e){
+        e.preventDefault();
+        var id = handle.getAttribute('data-drag-handle');
+        var row = document.querySelector('[data-genre-row="'+id+'"]');
+        if(!row) return;
+        var rows = Array.prototype.slice.call(document.querySelectorAll('[data-genre-row]'));
+        var startIndex = rows.indexOf(row);
+        var rowHeight = row.offsetHeight;
+        var startY = e.clientY;
+        row.classList.add('dragging');
+
+        function onMove(ev){
+          var delta = ev.clientY - startY;
+          row.style.transform = 'translateY('+delta+'px)';
+          row.style.position = 'relative';
+          row.style.zIndex = '10';
+          var shift = Math.round(delta / rowHeight);
+          var targetIndex = Math.max(0, Math.min(rows.length-1, startIndex+shift));
+          rows.forEach(function(r,i){
+            if(r===row) return;
+            var offset = 0;
+            if(startIndex < targetIndex && i>startIndex && i<=targetIndex) offset = -rowHeight;
+            else if(startIndex > targetIndex && i>=targetIndex && i<startIndex) offset = rowHeight;
+            r.style.transform = offset ? 'translateY('+offset+'px)' : '';
+            r.style.transition = 'transform .15s ease';
+          });
+          row._targetIndex = targetIndex;
+        }
+        function onUp(){
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          var targetIndex = row._targetIndex!==undefined ? row._targetIndex : startIndex;
+          rows.forEach(function(r){ r.style.transform=''; r.style.transition=''; r.style.position=''; r.style.zIndex=''; });
+          row.classList.remove('dragging');
+          if(targetIndex!==startIndex){
+            var moved = state.genres.splice(startIndex,1)[0];
+            state.genres.splice(targetIndex,0,moved);
+            persistGenres();
+          }
+          render();
+        }
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    });
+
+    document.querySelectorAll('[data-set-theme]').forEach(function(el){
+      el.addEventListener('click', function(){
+        state.theme = el.getAttribute('data-set-theme');
+        saveJSON(LS_THEME, state.theme);
+        render();
+      });
+    });
+    var fontSlider = document.getElementById('fontSlider');
+    if(fontSlider) fontSlider.addEventListener('input', function(e){
+      state.fontScale = parseFloat(e.target.value);
+      saveJSON(LS_FONTSCALE, state.fontScale);
+      render();
+    });
+
+    var genReviewImg = document.getElementById('genReviewImg');
+    if(genReviewImg) genReviewImg.addEventListener('click', function(){
+      var sel = document.getElementById('reviewYearSelect');
+      if(sel) generateYearReviewImage(sel.value);
+    });
+
+    document.querySelectorAll('[data-year-toggle]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var y = el.getAttribute('data-year-toggle');
+        state.expandedYear = (state.expandedYear===y) ? null : y;
+        render();
+      });
+    });
+
+    var exportBtn = document.getElementById('exportBtn');
+    if(exportBtn) exportBtn.addEventListener('click', doExport);
+    var importBtn = document.getElementById('importBtn');
+    if(importBtn) importBtn.addEventListener('click', function(){ document.getElementById('importFileInput').click(); });
+  }
+
+  function bindText(id, field){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', function(){
+      formDraft[field] = el.value;
+      var active = document.activeElement && document.activeElement.id;
+      var caret = el.selectionStart;
+      render();
+      if(active) restoreFocus(active, caret);
+    });
+  }
+
+  function bindDate(id, field){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('change', function(){
+      formDraft[field] = el.value;
+    });
+  }
+
+  function restoreFocus(id, caret){
+    var el = document.getElementById(id);
+    if(el){
+      el.focus();
+      if(typeof caret==='number' && el.setSelectionRange){
+        try{ el.setSelectionRange(caret, caret); }catch(e){}
+      }
+    }
+  }
+
+  function doExport(){
+    var payload = { exportedAt: new Date().toISOString(), books: state.books, genres: state.genres, colorMode: state.colorMode };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = 'mein-regal-backup-'+stamp+'.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+
+    state.lastBackup = new Date().toISOString();
+    saveJSON(LS_LAST_BACKUP, state.lastBackup);
+    showToast('Backup gespeichert');
+  }
+
+  function bookDupKey(b){
+    return (b.title||'').trim().toLowerCase()+'|'+(b.authorLast||'').trim().toLowerCase();
+  }
+  function genreDupKey(g){
+    return (g.name||'').trim().toLowerCase();
+  }
+
+  document.getElementById('importFileInput').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(reader.result);
+        var incomingBooks = Array.isArray(data.books) ? data.books : [];
+        var incomingGenres = Array.isArray(data.genres) ? data.genres : [];
+
+        var existingBookKeys = {};
+        state.books.forEach(function(b){ existingBookKeys[bookDupKey(b)] = true; });
+        var added = 0, skippedBroken = 0;
+        incomingBooks.forEach(function(b){
+          if(!b || !b.title || !String(b.title).trim()){ skippedBroken++; return; }
+          if(!b.genreIds){ b.genreIds = b.genreId ? [b.genreId] : []; }
+          var key = bookDupKey(b);
+          if(!existingBookKeys[key]){
+            state.books.push(b);
+            existingBookKeys[key] = true;
+            added++;
+          }
+        });
+
+        var existingGenreKeys = {};
+        state.genres.forEach(function(g){ existingGenreKeys[genreDupKey(g)] = true; });
+        incomingGenres.forEach(function(g){
+          if(!g || !g.name) return;
+          var key = genreDupKey(g);
+          if(!existingGenreKeys[key]){
+            state.genres.push(g);
+            existingGenreKeys[key] = true;
+          }
+        });
+
+        persistBooks();
+        persistGenres();
+        var msg = added+' Buch/Bücher importiert';
+        if(skippedBroken>0) msg += ' ('+skippedBroken+' ungültige Einträge übersprungen)';
+        showToast(msg);
+        render();
+      }catch(err){
+        showToast('Datei konnte nicht gelesen werden');
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
