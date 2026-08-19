@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>Mein Regal</title>
+<title>Mein Bücherregal</title>
 <style>
   :root{
     --bg:#182620; --panel:#1F332A; --card:#233A30; --cream:#EDE6D6; --cream-dim:#B9B0A0;
@@ -35,7 +35,7 @@
   .header-block{background:linear-gradient(180deg, var(--panel), var(--bg));
     padding:18px 16px 12px; position:sticky; top:0; z-index:20; border-bottom:1px solid var(--line);}
   .header-row{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px;}
-  .header-row h1{font-style:italic; font-weight:400; font-size:1.5rem;}
+  .header-row h1{font-style:italic; font-weight:400; font-size:1.375rem;}
   .header-actions{display:flex; gap:7px; align-items:center; flex-shrink:0;}
   .icon-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--card);
     display:flex;align-items:center;justify-content:center;color:var(--cream-dim); font-size:0.875rem; flex-shrink:0;}
@@ -201,6 +201,16 @@
 
   .toast{position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:var(--card); border:1px solid var(--gold);
     color:var(--cream); padding:8px 16px; border-radius:20px; font-family:'Courier New',monospace; font-size:0.75rem; z-index:100;}
+
+  .onboard-page{min-height:100vh; display:flex; flex-direction:column; padding:24px 20px 30px; box-sizing:border-box;}
+  .onboard-progress{display:flex; gap:6px; margin-bottom:32px; justify-content:center;}
+  .onboard-dot{width:7px;height:7px;border-radius:50%;background:var(--line);}
+  .onboard-dot.active{background:var(--gold); width:18px; border-radius:4px;}
+  .onboard-body{flex:1; display:flex; flex-direction:column; justify-content:center; text-align:center; max-width:400px; margin:0 auto;}
+  .onboard-title{font-family:Georgia,serif; font-style:italic; font-size:1.5rem; color:var(--cream); margin-bottom:16px;}
+  .onboard-text{font-size:1rem; line-height:1.65; color:var(--cream-dim); white-space:pre-line;}
+  .onboard-footer{display:flex; flex-direction:column; gap:10px; max-width:400px; margin:0 auto; width:100%;}
+  .onboard-skip{background:none; border:none; color:var(--cream-dim); font-family:'Courier New',monospace; font-size:0.75rem; padding:6px 0;}
 </style>
 </head>
 <body>
@@ -212,7 +222,8 @@
   "use strict";
 
   var LS_BOOKS='bibliothek_books_v1', LS_GENRES='bibliothek_genres_v1', LS_LAST_BACKUP='bibliothek_last_backup_v1',
-      LS_COLORMODE='bibliothek_colormode_v1', LS_THEME='bibliothek_theme_v1', LS_FONTSCALE='bibliothek_fontscale_v1';
+      LS_COLORMODE='bibliothek_colormode_v1', LS_THEME='bibliothek_theme_v1', LS_FONTSCALE='bibliothek_fontscale_v1',
+      LS_ONBOARDING='bibliothek_onboarding_seen_v1';
 
   function loadJSON(key, fallback){
     try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -222,6 +233,18 @@
     try{ localStorage.setItem(key, JSON.stringify(val)); return true; }
     catch(e){ return false; }
   }
+
+  var ONBOARDING_STEPS = [
+    {title:'Willkommen in deinem Bücherregal', body:'Deine persönliche Bibliothek – komplett offline, alle Daten bleiben nur auf diesem Gerät. Keine Anmeldung, kein Account, nichts wird geteilt.'},
+    {title:'Neues Buch anlegen', body:'Tippe oben auf „📖 + Neues Buch", um ein Buch einzutragen.'},
+    {title:'Vier verschiedene Status - so vielfältig wie du', body:'Wunschliste – Bücher, die du dir noch zulegen willst.\nLesestapel – liegt bereit, aber noch nicht angefangen.\nIn Arbeit – wird gerade gelesen.\nGelesen – abgeschlossen, mit Bewertung, Format und Notizen.'},
+    {title:'Was willst du als nächstes lesen & kaufen?', body:'Beim Lesestapel kannst du ein Buch als „nächstes lesen" 📌 markieren, in der Wunschliste eins als „nächstes kaufen" 💲 – jeweils immer nur eins gleichzeitig.'},
+    {title:'Mehr zum drücken: deine Wunschliste & Buchreihen', body:'⭐ Der Button neben der Suche zeigt deine Wunschliste inkl. Anzahl.\n🔖 Trägst du bei zwei Büchern denselben Reihennamen ein (z. B. „Harry Potter"), werden sie automatisch verknüpft – abrufbar über dieses Icon.'},
+    {title:'Deine Genres & deine Farben', body:'Über das 🎨-Icon verwaltest du deine Genres: Namen, Farben, Reihenfolge per Ziehen am Griff – für mehr Unterscheidung deiner Bücher auf einen Blick. Unter „Farbdarstellung" legst du fest, wie Bücher mit mehreren Genres auf dem Buchrücken aussehen.'},
+    {title:'Deine persönliche Statistik', body:'Das 📊-Icon zeigt dir deine Lese-Statistiken – hier kannst du dir auch einen Jahresrückblick erstellen und teilen.'},
+    {title:'Brauchst du nochmal Hilfe?', body:'Diese Kurzanleitung findest du jederzeit wieder unter ⚙️ Einstellungen → „❓ App-Anleitung".'},
+    {title:'Erste Regel ist: du sollst ein Backup erstellen', body:'Alles liegt nur auf diesem Gerät – lösch nie versehentlich deine Browser-Daten! Unter ⚙️ Einstellungen kannst du jederzeit ein Backup exportieren und später wieder einspielen.'}
+  ];
 
   var DEFAULT_GENRES = [
     {id:'historischer_roman', name:'Historischer Roman', color:'#8B4513'},
@@ -238,6 +261,9 @@
     if(!b.genreIds){ b.genreIds = b.genreId ? [b.genreId] : []; }
   });
 
+  var onboardingSeen = loadJSON(LS_ONBOARDING, false);
+  var initialView = (!onboardingSeen && loadedBooks.length===0) ? {mode:'onboarding'} : {mode:'shelf'};
+
   var state = {
     books: loadedBooks,
     genres: loadJSON(LS_GENRES, DEFAULT_GENRES),
@@ -245,7 +271,8 @@
     theme: loadJSON(LS_THEME, 'dark'),
     fontScale: loadJSON(LS_FONTSCALE, 1),
     lastBackup: loadJSON(LS_LAST_BACKUP, null),
-    view: {mode:'shelf'},
+    view: initialView,
+    onboardingStep: 0,
     statusFilter: 'all',
     query: '',
     expandedYear: null,
@@ -370,6 +397,7 @@
     else if(v.mode==='profile') html = renderProfilePage();
     else if(v.mode==='series') html = renderSeriesOverviewPage();
     else if(v.mode==='seriesDetail') html = renderSeriesDetailPage(v.name);
+    else if(v.mode==='onboarding') html = renderOnboardingPage();
 
     if(state.toast) html += '<div class="toast">'+escapeHtml(state.toast)+'</div>';
     app.innerHTML = html;
@@ -545,7 +573,7 @@
 
   function headerBlock(){
     var html = '<div class="header-block">';
-    html += '<div class="header-row"><h1>Mein Regal</h1><div class="header-actions">';
+    html += '<div class="header-row"><h1>Mein Bücherregal</h1><div class="header-actions">';
     html += '<button class="icon-btn" id="openGenres" title="Genres verwalten">🎨</button>';
     html += '<button class="icon-btn" id="openProfile" title="Profil & Statistik">📊</button>';
     html += '<button class="icon-btn" id="openSettings" title="Einstellungen">⚙️</button>';
@@ -580,9 +608,9 @@
   }
 
   function renderDetailPage(b){
-    if(!b) return '<div class="page"><button class="back-link" data-nav="shelf">‹ Regal</button><div class="empty-state">Buch nicht gefunden.</div></div>';
+    if(!b) return '<div class="page"><button class="back-link" data-nav="shelf">‹ Zum Regal</button><div class="empty-state">Buch nicht gefunden.</div></div>';
     var html = '<div class="page">';
-    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<button class="back-link" data-nav="shelf">‹ Zum Regal</button>';
     html += '<div class="detail-header">';
     html += '<div class="detail-cover" style="background:'+spineBackground(b)+';"></div>';
     html += '<div style="flex:1;min-width:0;">';
@@ -642,7 +670,7 @@
     var map = allSeriesMap();
     var keys = Object.keys(map).sort(function(a,b){ return map[a].name.localeCompare(map[b].name); });
     var html = '<div class="page">';
-    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<button class="back-link" data-nav="shelf">‹ Zum Regal</button>';
     html += '<h2 style="font-size:22px;margin-bottom:16px;">Buchreihen</h2>';
     if(keys.length===0){
       html += '<div class="empty-state">Noch keine Buchreihe erfasst.</div>';
@@ -687,6 +715,32 @@
       });
       html += '</div>';
     }
+    html += '</div>';
+    return html;
+  }
+
+  function renderOnboardingPage(){
+    var i = state.onboardingStep;
+    var step = ONBOARDING_STEPS[i];
+    var isLast = i === ONBOARDING_STEPS.length-1;
+    var html = '<div class="onboard-page">';
+
+    html += '<div class="onboard-progress">';
+    ONBOARDING_STEPS.forEach(function(s, idx){
+      html += '<span class="onboard-dot'+(idx===i?' active':'')+'"></span>';
+    });
+    html += '</div>';
+
+    html += '<div class="onboard-body">';
+    html += '<div class="onboard-title">'+escapeHtml(step.title)+'</div>';
+    html += '<div class="onboard-text">'+escapeHtml(step.body)+'</div>';
+    html += '</div>';
+
+    html += '<div class="onboard-footer">';
+    html += '<button class="primary-btn" id="onboardNext">'+(isLast?'Los geht\'s':'Weiter')+'</button>';
+    if(!isLast) html += '<button class="onboard-skip" id="onboardSkip">Überspringen</button>';
+    html += '</div>';
+
     html += '</div>';
     return html;
   }
@@ -856,7 +910,7 @@
   /* ---------- genre manager page ---------- */
   function renderGenrePage(){
     var html = '<div class="page">';
-    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<button class="back-link" data-nav="shelf">‹ Zum Regal</button>';
     html += '<h2 style="font-size:22px;margin-bottom:6px;">Genres</h2>';
     html += '<p style="color:var(--cream-dim);font-size:13px;margin-top:0;margin-bottom:16px;">Farbe und Name jederzeit änderbar.</p>';
 
@@ -888,8 +942,14 @@
   /* ---------- settings page (theme, font, backup) ---------- */
   function renderSettingsPage(){
     var html = '<div class="page">';
-    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<button class="back-link" data-nav="shelf">‹ Zum Regal</button>';
     html += '<h2 style="font-size:22px;margin-bottom:16px;">Einstellungen</h2>';
+
+    html += '<div class="settings-card">';
+    html += '<h3>❓ App-Anleitung</h3>';
+    html += '<p>Kurzer Überblick über Status, Buttons und Funktionen der App.</p>';
+    html += '<button class="secondary-btn" id="openOnboarding">Anleitung ansehen</button>';
+    html += '</div>';
 
     html += '<div class="settings-card">';
     html += '<h3>Darstellung</h3>';
@@ -1017,7 +1077,7 @@
   function renderProfilePage(){
     var s = computeStats();
     var html = '<div class="page">';
-    html += '<button class="back-link" data-nav="shelf">‹ Regal</button>';
+    html += '<button class="back-link" data-nav="shelf">‹ Zum Regal</button>';
     html += '<h2 style="font-size:22px;margin-bottom:16px;">Profil &amp; Statistik</h2>';
 
     if(s.totalBooks===0){
@@ -1141,7 +1201,7 @@
 
     ctx.fillStyle = '#B9B0A0';
     ctx.font = '16px "Courier New", monospace';
-    ctx.fillText('Mein Regal', 400, 920);
+    ctx.fillText('Mein Bücherregal', 400, 920);
 
     canvas.toBlob(function(blob){
       var file = new File([blob], 'lesejahr-'+year+'.png', {type:'image/png'});
@@ -1161,7 +1221,12 @@
   function attachHandlers(){
     var searchInput = document.getElementById('searchInput');
     if(searchInput){
-      searchInput.addEventListener('input', function(e){ state.query = e.target.value; render(); restoreFocus('searchInput'); });
+      searchInput.addEventListener('input', function(e){
+        state.query = e.target.value;
+        var caret = e.target.selectionStart;
+        render();
+        restoreFocus('searchInput', caret);
+      });
     }
     var clearSearch = document.getElementById('clearSearch');
     if(clearSearch) clearSearch.addEventListener('click', function(){ state.query=''; render(); });
@@ -1175,6 +1240,22 @@
     if(openProfile) openProfile.addEventListener('click', function(){ state.view={mode:'profile'}; render(); });
     var openSettings = document.getElementById('openSettings');
     if(openSettings) openSettings.addEventListener('click', function(){ state.view={mode:'settings'}; render(); });
+    var openOnboarding = document.getElementById('openOnboarding');
+    if(openOnboarding) openOnboarding.addEventListener('click', function(){ state.onboardingStep=0; state.view={mode:'onboarding'}; render(); });
+
+    function finishOnboarding(){
+      saveJSON(LS_ONBOARDING, true);
+      state.onboardingStep = 0;
+      state.view = {mode:'shelf'};
+      render();
+    }
+    var onboardNext = document.getElementById('onboardNext');
+    if(onboardNext) onboardNext.addEventListener('click', function(){
+      if(state.onboardingStep < ONBOARDING_STEPS.length-1){ state.onboardingStep++; render(); }
+      else { finishOnboarding(); }
+    });
+    var onboardSkip = document.getElementById('onboardSkip');
+    if(onboardSkip) onboardSkip.addEventListener('click', finishOnboarding);
 
     document.querySelectorAll('[data-status]').forEach(function(el){
       el.addEventListener('click', function(){
